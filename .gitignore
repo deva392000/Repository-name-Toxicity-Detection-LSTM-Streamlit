@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+tensorflow_env/
+.env
+
+.streamlit/secrets.toml
+
+*.log

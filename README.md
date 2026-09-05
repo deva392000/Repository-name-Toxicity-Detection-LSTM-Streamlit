@@ -1,116 +1,162 @@
-# Deep Learning for Comment Toxicity Detection
+# 🧠 Deep Learning for Comment Toxicity Detection
 
-## Project Overview
+A **Deep Learning-based multi-label text classification project** that detects different types of toxic comments using an **LSTM neural network** and provides real-time predictions through a **Streamlit web application**.
 
-This project uses Deep Learning and an LSTM model to detect toxic comments.
+## 📌 Project Overview
 
-The model performs multi-label classification and predicts six toxicity categories:
+Online platforms receive a large number of user comments, making manual moderation difficult.
 
-* Toxic
-* Severe Toxic
-* Obscene
-* Threat
-* Insult
-* Identity Hate
+This project uses an **LSTM (Long Short-Term Memory)** model to automatically classify comments into six different toxicity categories.
 
-## Technologies Used
+The trained model is integrated with Streamlit to provide an interactive interface where users can enter a comment and instantly view the prediction results.
 
-* Python 3.13.15
-* TensorFlow 2.20.0
-* Keras
-* Pandas
-* NumPy
-* Scikit-learn
-* Streamlit
-* Jupyter Notebook
-* Git & GitHub
+## 🎯 Toxicity Categories
 
-## Model Architecture
+The model predicts six categories:
+
+* **Toxic**
+* **Severe Toxic**
+* **Obscene**
+* **Threat**
+* **Insult**
+* **Identity Hate**
+
+Since a single comment can belong to multiple categories, this project uses **Multi-Label Classification**.
+
+---
+
+## 🛠️ Technologies Used
+
+* **Python 3.12.13** — Model development & Jupyter Notebook
+* **Python 3.13.15** — Streamlit application environment
+* **TensorFlow 2.20.0**
+* **Keras**
+* **Pandas**
+* **NumPy**
+* **Scikit-learn**
+* **Streamlit**
+* **Jupyter Notebook**
+* **Git & GitHub**
+
+---
+
+## 🧠 Deep Learning Workflow
+
+```text
+Raw Comments
+     ↓
+Text Cleaning
+     ↓
+Tokenization
+     ↓
+Sequence Padding
+     ↓
+Train / Validation Split
+     ↓
+Embedding Layer
+     ↓
+LSTM Layer
+     ↓
+Dense Layer
+     ↓
+Sigmoid Output Layer
+     ↓
+6 Toxicity Predictions
+```
+
+---
+
+## 🏗️ Model Architecture
 
 ```text
 Input Text
     ↓
-Text Cleaning
-    ↓
-Tokenization
-    ↓
-Padding
-    ↓
 Embedding Layer
     ↓
-LSTM Layer
+LSTM (64 Units)
     ↓
-Dense Layer
+Dense Layer (32 Units)
     ↓
-Sigmoid Output
-    ↓
-6 Toxicity Predictions
+Sigmoid Output (6 Classes)
 ```
 
-## Model Details
+### Model Configuration
 
-* Python Version: 3.13.15
-* TensorFlow Version: 2.20.0
-* Model: LSTM
-* Vocabulary Size: 20,000
-* Sequence Length: 200
-* Embedding Dimension: 128
-* LSTM Units: 64
-* Dense Units: 32
-* Output Classes: 6
-* Loss: Binary Crossentropy
-* Optimizer: Adam
+| Parameter                | Value               |
+| ------------------------ | ------------------- |
+| Model Development Python | 3.12.13             |
+| Streamlit Python         | 3.13.15             |
+| TensorFlow               | 2.20.0              |
+| Model                    | LSTM                |
+| Vocabulary Size          | 20,000              |
+| Sequence Length          | 200                 |
+| Embedding Dimension      | 128                 |
+| LSTM Units               | 64                  |
+| Dense Units              | 32                  |
+| Output Classes           | 6                   |
+| Loss Function            | Binary Crossentropy |
+| Optimizer                | Adam                |
 
-## Toxicity Categories
+---
 
-The model predicts the following six categories:
+## 📊 Dataset
 
-| Category      | Description                            |
-| ------------- | -------------------------------------- |
-| Toxic         | General toxic language                 |
-| Severe Toxic  | Highly toxic language                  |
-| Obscene       | Obscene or offensive language          |
-| Threat        | Threatening language                   |
-| Insult        | Insulting language                     |
-| Identity Hate | Hate directed toward an identity group |
+The project uses a labeled comment toxicity dataset.
 
-## Dataset
+### Training Data
 
-The dataset contains comments with multiple toxicity labels.
+* **Rows:** 159,571
+* **Columns:** 8
 
-### Training Dataset
+### Testing Data
 
-* Rows: 159,571
-* Columns: 8
+* **Rows:** 153,164
+* **Columns:** 2
 
-### Testing Dataset
+The training data contains the comment text and six toxicity labels.
 
-* Rows: 153,164
-* Columns: 2
+### Target Labels
 
-The training dataset contains the comment text and six toxicity labels.
+```text
+toxic
+severe_toxic
+obscene
+threat
+insult
+identity_hate
+```
 
-## Evaluation
+---
 
-The model achieved approximately:
+## 📈 Model Evaluation
 
-* Macro F1 Score: 0.51
-* Weighted F1 Score: 0.71
+The trained model achieved approximately:
 
-## Streamlit Application
+| Metric            |    Score |
+| ----------------- | -------: |
+| Macro F1 Score    | **0.51** |
+| Weighted F1 Score | **0.71** |
 
-The trained LSTM model is deployed using Streamlit.
+Class-specific probability thresholds were also tuned to improve multi-label predictions.
 
-Users can enter a comment and receive real-time predictions for each toxicity category.
+---
 
-The application also displays:
+## 🌐 Streamlit Application
 
-* Toxicity probabilities
-* Predicted categories
-* Highest class probability
-* Overall prediction result
+The trained LSTM model is deployed using **Streamlit**.
 
-## Project Structure
+The application allows users to:
+
+* Enter a comment
+* Analyze the comment in real time
+* View toxicity probabilities
+* Identify predicted toxicity categories
+* View the highest class probability
+* Compare probabilities across all six categories
+
+---
+
+## 📁 Project Structure
 
 ```text
 Toxicity Detection/
@@ -126,42 +172,64 @@ Toxicity Detection/
 └── .gitignore
 ```
 
-## How to Run
+---
 
-Install the required libraries and run the Streamlit application:
+## ▶️ How to Run the Application
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/deva392000/Repository-name-Toxicity-Detection-LSTM-Streamlit.git
+```
+
+### 2. Open the Project Folder
+
+```bash
+cd Repository-name-Toxicity-Detection-LSTM-Streamlit
+```
+
+### 3. Run the Streamlit Application
 
 ```bash
 py -3.13 -m streamlit run app.py
 ```
 
-The application will open in your web browser.
+The application will open in your browser.
 
-## Prediction Example
+---
 
-Example input:
-
-```text
-You are doing a great job!
-```
-
-The model analyzes the comment and predicts the probability of each toxicity category.
-
-## Key Learning
+## 📚 Key Learning Outcomes
 
 Through this project, I learned:
 
 * Text preprocessing
 * Tokenization
 * Sequence padding
-* Deep Learning
-* LSTM networks
+* Word embeddings
+* LSTM neural networks
 * Multi-label classification
-* Model evaluation
-* Threshold tuning
+* Model training and validation
+* F1-score evaluation
+* Probability threshold tuning
 * Model saving and loading
 * Streamlit deployment
 * Git and GitHub
 
-## Author
+---
 
-Devendra
+## 🚀 Future Improvements
+
+* Experiment with **Bidirectional LSTM**
+* Experiment with **GRU and Transformer models**
+* Improve handling of class imbalance
+* Optimize classification thresholds
+* Improve model performance
+* Deploy the application on a cloud platform
+
+---
+
+## 👨‍💻 Author
+
+**Devendra**
+
+Built as a Deep Learning project demonstrating **NLP, LSTM, Multi-Label Classification, Model Evaluation, and Streamlit Deployment**.

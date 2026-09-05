@@ -8,3 +8,7 @@ tensorflow_env/
 .streamlit/secrets.toml
 
 *.log
+# Dataset files
+train.csv
+test.csv
+test_predictions.csv

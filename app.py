@@ -1,7 +1,3 @@
-# ============================================================
-# COMMENT TOXICITY DETECTION
-# Deep Learning - LSTM + Streamlit
-# ============================================================
 
 import streamlit as st
 import tensorflow as tf
@@ -11,135 +7,91 @@ import numpy as np
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 
 
-# ============================================================
-# 1. PAGE CONFIGURATION
-# ============================================================
+# =========================================================
+# PAGE CONFIGURATION
+# =========================================================
 
 st.set_page_config(
-    page_title="Toxicity Detector",
-    page_icon="🛡️",
+    page_title="Toxicity Detection",
+    page_icon="🧠",
     layout="wide"
 )
 
 
-# ============================================================
-# 2. CUSTOM CSS
-# ============================================================
+# =========================================================
+# CUSTOM CSS
+# =========================================================
 
 st.markdown("""
 <style>
 
 .main {
-    padding-top: 1rem;
+    padding-top: 2rem;
 }
 
 .title {
     text-align: center;
     font-size: 42px;
     font-weight: bold;
-    margin-bottom: 5px;
 }
 
 .subtitle {
     text-align: center;
     font-size: 18px;
-    color: #666;
+    color: gray;
     margin-bottom: 30px;
 }
 
-.result-card {
+.card {
     padding: 20px;
     border-radius: 12px;
-    margin-bottom: 10px;
+    text-align: center;
     border: 1px solid #ddd;
-}
-
-.safe {
-    background-color: #f0fff4;
-}
-
-.danger {
-    background-color: #fff5f5;
-}
-
-.score {
-    text-align: center;
-    font-size: 30px;
-    font-weight: bold;
-}
-
-.footer {
-    text-align: center;
-    color: #888;
-    margin-top: 40px;
 }
 
 </style>
 """, unsafe_allow_html=True)
 
 
-# ============================================================
-# 3. LOAD MODEL AND TOKENIZER
-# ============================================================
+# =========================================================
+# LOAD MODEL AND TOKENIZER
+# =========================================================
 
 @st.cache_resource
-def load_model_and_tokenizer():
+def load_model():
+    return tf.keras.models.load_model("toxicity_lstm_model.keras")
 
-    model = tf.keras.models.load_model(
-        "toxicity_lstm_model.keras"
-    )
 
+@st.cache_resource
+def load_tokenizer():
     with open("tokenizer.pkl", "rb") as file:
-        tokenizer = pickle.load(file)
-
-    return model, tokenizer
+        return pickle.load(file)
 
 
-model, tokenizer = load_model_and_tokenizer()
+model = load_model()
+tokenizer = load_tokenizer()
 
 
-# ============================================================
-# 4. TEXT CLEANING
-# ============================================================
+# =========================================================
+# TEXT CLEANING
+# =========================================================
 
 def clean_text(text):
 
     text = text.lower()
 
-    # Remove URLs
-    text = re.sub(
-        r"http\S+|www\S+",
-        "",
-        text
-    )
+    text = re.sub(r"http\S+|www\S+|https\S+", "", text)
 
-    # Remove HTML tags
-    text = re.sub(
-        r"<.*?>",
-        "",
-        text
-    )
+    text = re.sub(r"[^a-zA-Z\s]", "", text)
 
-    # Keep alphabets and spaces
-    text = re.sub(
-        r"[^a-zA-Z\s]",
-        "",
-        text
-    )
-
-    # Remove extra spaces
-    text = re.sub(
-        r"\s+",
-        " ",
-        text
-    ).strip()
+    text = re.sub(r"\s+", " ", text).strip()
 
     return text
 
 
-# ============================================================
-# 5. LABELS
-# ============================================================
+# =========================================================
+# LABELS AND THRESHOLDS
+# =========================================================
 
 labels = [
     "toxic",
@@ -150,342 +102,439 @@ labels = [
     "identity_hate"
 ]
 
-
-# ============================================================
-# 6. THRESHOLDS
-# ============================================================
-
-thresholds = [
-    0.5,
-    0.5,
-    0.5,
-    0.1,
-    0.5,
-    0.1
-]
+thresholds = [0.5, 0.5, 0.5, 0.1, 0.5, 0.1]
 
 
-# ============================================================
-# 7. PREDICTION FUNCTION
-# ============================================================
+# =========================================================
+# PREDICTION FUNCTION
+# =========================================================
 
-def predict_toxicity(comment):
+def predict_toxicity(text):
 
-    # Clean comment
-    comment = clean_text(comment)
+    cleaned_text = clean_text(text)
 
-    # Convert text to sequence
-    sequence = tokenizer.texts_to_sequences(
-        [comment]
-    )
+    sequence = tokenizer.texts_to_sequences([cleaned_text])
 
-    # Padding
-    padded = pad_sequences(
+    padded_sequence = pad_sequences(
         sequence,
         maxlen=200,
         padding="post",
         truncating="post"
     )
 
-    # Model prediction
     probabilities = model.predict(
-        padded,
+        padded_sequence,
         verbose=0
     )[0]
 
-    return probabilities
+    predictions = probabilities >= np.array(thresholds)
+
+    return probabilities, predictions
 
 
-# ============================================================
-# 8. HEADER
-# ============================================================
+# =========================================================
+# TITLE
+# =========================================================
 
 st.markdown(
-    '<div class="title">🛡️ Comment Toxicity Detector</div>',
+    '<div class="title">🧠 Comment Toxicity Detection</div>',
     unsafe_allow_html=True
 )
 
 st.markdown(
     '<div class="subtitle">'
-    'AI-powered toxic comment detection using Deep Learning LSTM'
+    'Deep Learning based Multi-Label Toxicity Classification using LSTM'
     '</div>',
     unsafe_allow_html=True
 )
 
 
-# ============================================================
-# 9. INFORMATION CARDS
-# ============================================================
+# =========================================================
+# INFORMATION CARDS
+# =========================================================
 
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
-    st.metric(
-        "🤖 Model",
-        "LSTM"
-    )
+    st.metric("🧠 Model", "LSTM")
 
 with col2:
-    st.metric(
-        "🏷️ Labels",
-        "6"
-    )
+    st.metric("🏷️ Labels", "6")
 
 with col3:
-    st.metric(
-        "🧠 Task",
-        "Multi-Label"
-    )
+    st.metric("🎯 Task", "Multi-Label")
 
 with col4:
-    st.metric(
-        "⚡ Prediction",
-        "Real-Time"
-    )
+    st.metric("⚡ Prediction", "Real-Time")
 
+
+# =========================================================
+# COMMENT INPUT
+# =========================================================
 
 st.markdown("---")
 
-
-# ============================================================
-# 10. MAIN LAYOUT
-# ============================================================
-
-left, right = st.columns(
-    [1.4, 1]
-)
+left_col, right_col = st.columns([1.5, 1])
 
 
-# ============================================================
-# 11. COMMENT INPUT
-# ============================================================
-
-with left:
+with left_col:
 
     st.subheader("💬 Enter Your Comment")
 
     comment = st.text_area(
-        "Comment",
-        height=200,
-        placeholder="Example: You are a wonderful person...",
-        label_visibility="collapsed"
+        "Type a comment below:",
+        height=180,
+        placeholder="Enter a comment to analyze..."
     )
 
+    st.write("### 🧪 Sample Comments")
 
-    # Example comments
+    sample_col1, sample_col2, sample_col3 = st.columns(3)
 
-    st.write("**Try an example:**")
+    with sample_col1:
+        positive = st.button("😊 Positive")
 
-    example1, example2, example3 = st.columns(3)
+    with sample_col2:
+        toxic = st.button("😡 Toxic")
 
-    with example1:
+    with sample_col3:
+        neutral = st.button("😐 Neutral")
 
-        if st.button(
-            "😊 Positive",
-            use_container_width=True
-        ):
-            comment = "You are a wonderful person"
+    if positive:
+        comment = "Thank you for your amazing work!"
 
-    with example2:
+    if toxic:
+        comment = "You are stupid and I hate you!"
 
-        if st.button(
-            "😡 Toxic",
-            use_container_width=True
-        ):
-            comment = "You are stupid and disgusting"
-
-    with example3:
-
-        if st.button(
-            "😐 Neutral",
-            use_container_width=True
-        ):
-            comment = "The weather is nice today"
+    if neutral:
+        comment = "The weather is nice today."
 
 
-    st.write("")
-
-
-    # Predict button
-
-    predict_button = st.button(
+    analyze = st.button(
         "🔍 Analyze Comment",
-        use_container_width=True,
-        type="primary"
+        use_container_width=True
     )
 
 
-# ============================================================
-# 12. ABOUT MODEL
-# ============================================================
+with right_col:
 
-with right:
+    st.subheader("ℹ️ About the Model")
 
-    st.subheader("ℹ️ About This Model")
+    st.write("""
+    This application uses an LSTM-based Deep Learning model
+    to classify comments into six different toxicity categories.
 
-    st.write(
-        "This application uses an LSTM-based "
-        "Deep Learning model to identify different "
-        "types of toxic comments."
-    )
+    The model performs multi-label classification, meaning one
+    comment can belong to multiple toxicity categories.
+    """)
 
-    st.write("**Detected Categories:**")
+    st.write("### Model Details")
 
-    st.write("🔴 Toxic")
-    st.write("🔴 Severe Toxic")
-    st.write("🔴 Obscene")
-    st.write("🔴 Threat")
-    st.write("🔴 Insult")
-    st.write("🔴 Identity Hate")
-
-    st.info(
-        "One comment can belong to multiple categories. "
-        "Therefore, this is a multi-label classification problem."
-    )
+    st.write("""
+    - Model: LSTM
+    - Vocabulary Size: 20,000
+    - Sequence Length: 200
+    - Embedding Dimension: 128
+    - LSTM Units: 64
+    - Dense Units: 32
+    - Output Classes: 6
+    - Loss: Binary Crossentropy
+    - Optimizer: Adam
+    """)
 
 
-# ============================================================
-# 13. PREDICTION
-# ============================================================
+# =========================================================
+# PREDICTION RESULTS
+# =========================================================
 
-if predict_button:
+if analyze:
 
     if comment.strip() == "":
-
-        st.warning(
-            "⚠️ Please enter a comment first."
-        )
+        st.warning("⚠️ Please enter a comment.")
 
     else:
 
-        # Get probabilities
-
-        probabilities = predict_toxicity(
-            comment
-        )
-
-
-        # ====================================================
-        # OVERALL SCORE
-        # ====================================================
-
-        max_probability = float(
-            np.max(probabilities)
-        )
-
-        toxic_detected = any(
-            probability >= threshold
-            for probability, threshold
-            in zip(
-                probabilities,
-                thresholds
-            )
-        )
-
+        probabilities, predictions = predict_toxicity(comment)
 
         st.markdown("---")
 
-        st.subheader("📊 Analysis Result")
+        st.header("📊 Prediction Results")
+
+        # Highest probability
+        max_probability = np.max(probabilities)
+
+        st.write("### Highest Class Probability")
+
+        st.write(
+            f"Highest class probability: "
+            f"**{max_probability * 100:.2f}%**"
+        )
 
 
-        # ====================================================
-        # OVERALL RESULT
-        # ====================================================
-
-        if toxic_detected:
+        # Overall result
+        if np.any(predictions):
 
             st.error(
-                "🚨 Toxic Content Detected"
+                "🚨 Toxic content detected"
             )
 
         else:
 
             st.success(
-                "✅ No Toxic Content Detected"
+                "✅ No toxic content detected"
             )
 
 
-        # ====================================================
-        # TOXICITY SCORE
-        # ====================================================
+        # Category results
+        st.write("### 🏷️ Toxicity Categories")
 
-        st.write("### Highest Class Probability")
-
-        st.progress(
-            min(max_probability, 1.0)
-        )
-
-        st.write(
-    f"Highest class probability: "
-    f"**{max_probability * 100:.2f}%**"
-)
-
-
-        # ====================================================
-        # CATEGORY RESULTS
-        # ====================================================
-
-        st.write("### 🏷️ Category Predictions")
-
-
-        result_columns = st.columns(2)
-
-
-        for i, (
-            label,
-            probability,
-            threshold
-        ) in enumerate(
-            zip(
-                labels,
-                probabilities,
-                thresholds
-            )
+        for label, probability, prediction in zip(
+            labels,
+            probabilities,
+            predictions
         ):
 
-            prediction = (
-                probability >= threshold
-            )
+            percentage = probability * 100
 
-            percentage = (
-                probability * 100
-            )
+            if prediction:
 
-
-            with result_columns[i % 2]:
-
-                if prediction:
-
-                    st.error(
-                        f"🚨 {label.replace('_', ' ').title()}"
-                    )
-
-                else:
-
-                    st.success(
-                        f"✅ {label.replace('_', ' ').title()}"
-                    )
-
-                st.progress(
-                    float(probability)
+                st.error(
+                    f"🚨 {label.replace('_', ' ').title()} "
+                    f"— {percentage:.2f}%"
                 )
 
-                st.caption(
-                    f"Probability: "
-                    f"{percentage:.2f}%"
+            else:
+
+                st.write(
+                    f"✅ {label.replace('_', ' ').title()} "
+                    f"— {percentage:.2f}%"
                 )
 
+            st.progress(
+                float(probability)
+            )
 
-# ============================================================
-# 14. FOOTER
-# ============================================================
+
+# =========================================================
+# DATA INSIGHTS
+# =========================================================
+
+st.markdown("---")
+
+st.header("📊 Data Insights")
+
+st.write("### Dataset Overview")
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.metric(
+        "Total Comments",
+        "159,571"
+    )
+
+with col2:
+    st.metric(
+        "Toxic Comments",
+        "15,294"
+    )
+
+with col3:
+    st.metric(
+        "Toxicity Labels",
+        "6"
+    )
+
+
+# =========================================================
+# LABEL DISTRIBUTION
+# =========================================================
+
+st.write("### 📈 Toxicity Label Distribution")
+
+label_counts = {
+    "Toxic": 15294,
+    "Severe Toxic": 1595,
+    "Obscene": 8449,
+    "Threat": 478,
+    "Insult": 7877,
+    "Identity Hate": 1405
+}
+
+st.bar_chart(label_counts)
+
+
+# =========================================================
+# LABEL PERCENTAGES
+# =========================================================
+
+st.write("### 📊 Label Percentages")
+
+label_percentages = {
+    "Toxic": 9.58,
+    "Severe Toxic": 1.00,
+    "Obscene": 5.29,
+    "Threat": 0.30,
+    "Insult": 4.94,
+    "Identity Hate": 0.88
+}
+
+for label, percentage in label_percentages.items():
+
+    st.write(
+        f"**{label}: {percentage}%**"
+    )
+
+    st.progress(
+        percentage / 100
+    )
+
+
+# =========================================================
+# MODEL PERFORMANCE
+# =========================================================
+
+st.markdown("---")
+
+st.header("📈 Model Performance")
+
+metric_col1, metric_col2 = st.columns(2)
+
+with metric_col1:
+
+    st.metric(
+        "Macro F1 Score",
+        "0.51"
+    )
+
+with metric_col2:
+
+    st.metric(
+        "Weighted F1 Score",
+        "0.71"
+    )
+# =========================================================
+# BULK CSV PREDICTION
+# =========================================================
+
+st.markdown("---")
+
+st.header("📁 Bulk CSV Prediction")
+
+st.write(
+    "Upload a CSV file containing a "
+    "`comment_text` column."
+)
+
+uploaded_file = st.file_uploader(
+    "Upload a CSV file",
+    type=["csv"]
+)
+
+if uploaded_file is not None:
+
+    import pandas as pd
+
+    df = pd.read_csv(uploaded_file)
+
+    st.write("### 📋 Uploaded Data")
+
+    st.dataframe(
+        df.head(10),
+        use_container_width=True
+    )
+
+    # Check comment_text column
+    if "comment_text" not in df.columns:
+
+        st.error(
+            "❌ CSV must contain a 'comment_text' column."
+        )
+
+    else:
+
+        st.success(
+            f"✅ {len(df)} comments found."
+        )
+
+        if st.button(
+            "🔍 Predict All Comments",
+            use_container_width=True
+        ):
+
+            results = []
+
+            progress = st.progress(0)
+
+            total = len(df)
+
+            for i, text in enumerate(df["comment_text"]):
+
+                probabilities, predictions = predict_toxicity(
+                    str(text)
+                )
+
+                result = {
+                    "comment_text": text
+                }
+
+                for label, probability, prediction in zip(
+                    labels,
+                    probabilities,
+                    predictions
+                ):
+
+                    result[f"{label}_probability"] = round(
+                        float(probability),
+                        4
+                    )
+
+                    result[label] = int(prediction)
+
+                results.append(result)
+
+                progress.progress(
+                    (i + 1) / total
+                )
+
+            result_df = pd.DataFrame(results)
+
+            st.success(
+                "✅ Bulk prediction completed!"
+            )
+
+            st.write("### 📊 Prediction Results")
+
+            st.dataframe(
+                result_df,
+                use_container_width=True
+            )
+
+            csv_data = result_df.to_csv(
+                index=False
+            ).encode("utf-8")
+
+            st.download_button(
+                label="⬇️ Download Predictions CSV",
+                data=csv_data,
+                file_name="toxicity_bulk_predictions.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+
+# =========================================================
+# FOOTER
+# =========================================================
 
 st.markdown("---")
 
 st.markdown(
-    '<div class="footer">'
-    'Deep Learning Project • LSTM Multi-Label Classification • '
-    'Streamlit'
-    '</div>',
+    """
+    <div style="text-align:center; color:gray;">
+        🧠 Deep Learning • LSTM • NLP • Multi-Label Classification
+        <br>
+        Built with Python, TensorFlow & Streamlit
+    </div>
+    """,
     unsafe_allow_html=True
 )

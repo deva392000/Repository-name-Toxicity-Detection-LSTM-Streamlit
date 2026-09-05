@@ -4,6 +4,10 @@ import tensorflow as tf
 import pickle
 import re
 import numpy as np
+import pandas as pd
+import nltk
+
+from nltk.corpus import stopwords
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 
 
@@ -16,6 +20,15 @@ st.set_page_config(
     page_icon="🧠",
     layout="wide"
 )
+
+
+# =========================================================
+# DOWNLOAD / LOAD STOPWORDS
+# =========================================================
+
+nltk.download("stopwords", quiet=True)
+
+stop_words = set(stopwords.words("english"))
 
 
 # =========================================================
@@ -59,7 +72,9 @@ st.markdown("""
 
 @st.cache_resource
 def load_model():
-    return tf.keras.models.load_model("toxicity_lstm_model.keras")
+    return tf.keras.models.load_model(
+        "toxicity_lstm_model.keras"
+    )
 
 
 @st.cache_resource
@@ -80,13 +95,50 @@ def clean_text(text):
 
     text = text.lower()
 
-    text = re.sub(r"http\S+|www\S+|https\S+", "", text)
+    # Remove URLs
+    text = re.sub(
+        r"http\S+|www\S+",
+        "",
+        text
+    )
 
-    text = re.sub(r"[^a-zA-Z\s]", "", text)
+    # Remove HTML tags
+    text = re.sub(
+        r"<.*?>",
+        "",
+        text
+    )
 
-    text = re.sub(r"\s+", " ", text).strip()
+    # Remove special characters and numbers
+    text = re.sub(
+        r"[^a-zA-Z\s]",
+        "",
+        text
+    )
+
+    # Remove extra spaces
+    text = re.sub(
+        r"\s+",
+        " ",
+        text
+    ).strip()
 
     return text
+
+
+# =========================================================
+# STOPWORD REMOVAL
+# =========================================================
+
+def remove_stopwords(text):
+
+    words = text.split()
+
+    return " ".join(
+        word
+        for word in words
+        if word not in stop_words
+    )
 
 
 # =========================================================
@@ -102,7 +154,14 @@ labels = [
     "identity_hate"
 ]
 
-thresholds = [0.5, 0.5, 0.5, 0.1, 0.5, 0.1]
+thresholds = [
+    0.5,   # toxic
+    0.5,   # severe_toxic
+    0.5,   # obscene
+    0.1,   # threat
+    0.5,   # insult
+    0.1    # identity_hate
+]
 
 
 # =========================================================
@@ -111,10 +170,19 @@ thresholds = [0.5, 0.5, 0.5, 0.1, 0.5, 0.1]
 
 def predict_toxicity(text):
 
+    # Same preprocessing used during training
     cleaned_text = clean_text(text)
 
-    sequence = tokenizer.texts_to_sequences([cleaned_text])
+    cleaned_text = remove_stopwords(
+        cleaned_text
+    )
 
+    # Tokenization
+    sequence = tokenizer.texts_to_sequences(
+        [cleaned_text]
+    )
+
+    # Padding
     padded_sequence = pad_sequences(
         sequence,
         maxlen=200,
@@ -122,12 +190,16 @@ def predict_toxicity(text):
         truncating="post"
     )
 
+    # Prediction
     probabilities = model.predict(
         padded_sequence,
         verbose=0
     )[0]
 
-    predictions = probabilities >= np.array(thresholds)
+    # Apply individual thresholds
+    predictions = (
+        probabilities >= np.array(thresholds)
+    )
 
     return probabilities, predictions
 
@@ -137,7 +209,9 @@ def predict_toxicity(text):
 # =========================================================
 
 st.markdown(
-    '<div class="title">🧠 Comment Toxicity Detection</div>',
+    '<div class="title">'
+    '🧠 Comment Toxicity Detection'
+    '</div>',
     unsafe_allow_html=True
 )
 
@@ -156,16 +230,28 @@ st.markdown(
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
-    st.metric("🧠 Model", "LSTM")
+    st.metric(
+        "🧠 Model",
+        "LSTM"
+    )
 
 with col2:
-    st.metric("🏷️ Labels", "6")
+    st.metric(
+        "🏷️ Labels",
+        "6"
+    )
 
 with col3:
-    st.metric("🎯 Task", "Multi-Label")
+    st.metric(
+        "🎯 Task",
+        "Multi-Label"
+    )
 
 with col4:
-    st.metric("⚡ Prediction", "Real-Time")
+    st.metric(
+        "⚡ Prediction",
+        "Real-Time"
+    )
 
 
 # =========================================================
@@ -181,8 +267,13 @@ with left_col:
 
     st.subheader("💬 Enter Your Comment")
 
+    # Session state for sample buttons
+    if "comment_text" not in st.session_state:
+        st.session_state.comment_text = ""
+
     comment = st.text_area(
         "Type a comment below:",
+        key="comment_text",
         height=180,
         placeholder="Enter a comment to analyze..."
     )
@@ -192,23 +283,43 @@ with left_col:
     sample_col1, sample_col2, sample_col3 = st.columns(3)
 
     with sample_col1:
-        positive = st.button("😊 Positive")
+
+        if st.button(
+            "😊 Positive",
+            use_container_width=True
+        ):
+
+            st.session_state.comment_text = (
+                "Thank you for your amazing work!"
+            )
+
+            st.rerun()
 
     with sample_col2:
-        toxic = st.button("😡 Toxic")
+
+        if st.button(
+            "😡 Toxic",
+            use_container_width=True
+        ):
+
+            st.session_state.comment_text = (
+                "You are stupid and I hate you!"
+            )
+
+            st.rerun()
 
     with sample_col3:
-        neutral = st.button("😐 Neutral")
 
-    if positive:
-        comment = "Thank you for your amazing work!"
+        if st.button(
+            "😐 Neutral",
+            use_container_width=True
+        ):
 
-    if toxic:
-        comment = "You are stupid and I hate you!"
+            st.session_state.comment_text = (
+                "The weather is nice today."
+            )
 
-    if neutral:
-        comment = "The weather is nice today."
-
+            st.rerun()
 
     analyze = st.button(
         "🔍 Analyze Comment",
@@ -250,26 +361,36 @@ with right_col:
 if analyze:
 
     if comment.strip() == "":
-        st.warning("⚠️ Please enter a comment.")
+
+        st.warning(
+            "⚠️ Please enter a comment."
+        )
 
     else:
 
-        probabilities, predictions = predict_toxicity(comment)
+        probabilities, predictions = (
+            predict_toxicity(comment)
+        )
 
         st.markdown("---")
 
-        st.header("📊 Prediction Results")
+        st.header(
+            "📊 Prediction Results"
+        )
 
         # Highest probability
-        max_probability = np.max(probabilities)
+        max_probability = np.max(
+            probabilities
+        )
 
-        st.write("### Highest Class Probability")
+        st.write(
+            "### Highest Class Probability"
+        )
 
         st.write(
             f"Highest class probability: "
             f"**{max_probability * 100:.2f}%**"
         )
-
 
         # Overall result
         if np.any(predictions):
@@ -284,9 +405,10 @@ if analyze:
                 "✅ No toxic content detected"
             )
 
-
         # Category results
-        st.write("### 🏷️ Toxicity Categories")
+        st.write(
+            "### 🏷️ Toxicity Categories"
+        )
 
         for label, probability, prediction in zip(
             labels,
@@ -294,19 +416,23 @@ if analyze:
             predictions
         ):
 
-            percentage = probability * 100
+            percentage = (
+                probability * 100
+            )
 
             if prediction:
 
                 st.error(
-                    f"🚨 {label.replace('_', ' ').title()} "
+                    f"🚨 "
+                    f"{label.replace('_', ' ').title()} "
                     f"— {percentage:.2f}%"
                 )
 
             else:
 
                 st.write(
-                    f"✅ {label.replace('_', ' ').title()} "
+                    f"✅ "
+                    f"{label.replace('_', ' ').title()} "
                     f"— {percentage:.2f}%"
                 )
 
@@ -321,25 +447,32 @@ if analyze:
 
 st.markdown("---")
 
-st.header("📊 Data Insights")
+st.header(
+    "📊 Data Insights"
+)
 
-st.write("### Dataset Overview")
+st.write(
+    "### Dataset Overview"
+)
 
 col1, col2, col3 = st.columns(3)
 
 with col1:
+
     st.metric(
         "Total Comments",
         "159,571"
     )
 
 with col2:
+
     st.metric(
         "Toxic Comments",
         "15,294"
     )
 
 with col3:
+
     st.metric(
         "Toxicity Labels",
         "6"
@@ -350,7 +483,9 @@ with col3:
 # LABEL DISTRIBUTION
 # =========================================================
 
-st.write("### 📈 Toxicity Label Distribution")
+st.write(
+    "### 📈 Toxicity Label Distribution"
+)
 
 label_counts = {
     "Toxic": 15294,
@@ -361,14 +496,18 @@ label_counts = {
     "Identity Hate": 1405
 }
 
-st.bar_chart(label_counts)
+st.bar_chart(
+    label_counts
+)
 
 
 # =========================================================
 # LABEL PERCENTAGES
 # =========================================================
 
-st.write("### 📊 Label Percentages")
+st.write(
+    "### 📊 Label Percentages"
+)
 
 label_percentages = {
     "Toxic": 9.58,
@@ -379,7 +518,9 @@ label_percentages = {
     "Identity Hate": 0.88
 }
 
-for label, percentage in label_percentages.items():
+for label, percentage in (
+    label_percentages.items()
+):
 
     st.write(
         f"**{label}: {percentage}%**"
@@ -396,30 +537,48 @@ for label, percentage in label_percentages.items():
 
 st.markdown("---")
 
-st.header("📈 Model Performance")
+st.header(
+    "📈 Model Performance"
+)
+
 
 metric_col1, metric_col2 = st.columns(2)
 
 with metric_col1:
 
     st.metric(
-        "Macro F1 Score",
-        "0.51"
+        "Training Accuracy",
+        "99.34%"
     )
+
+    st.metric(
+        "Macro F1 Score",
+        "0.44"
+    )
+
 
 with metric_col2:
 
     st.metric(
-        "Weighted F1 Score",
-        "0.71"
+        "Validation Accuracy",
+        "99.40%"
     )
+
+    st.metric(
+        "Weighted F1 Score",
+        "0.69"
+    )
+
+
 # =========================================================
 # BULK CSV PREDICTION
 # =========================================================
 
 st.markdown("---")
 
-st.header("📁 Bulk CSV Prediction")
+st.header(
+    "📁 Bulk CSV Prediction"
+)
 
 st.write(
     "Upload a CSV file containing a "
@@ -431,24 +590,28 @@ uploaded_file = st.file_uploader(
     type=["csv"]
 )
 
+
 if uploaded_file is not None:
 
-    import pandas as pd
+    df = pd.read_csv(
+        uploaded_file
+    )
 
-    df = pd.read_csv(uploaded_file)
-
-    st.write("### 📋 Uploaded Data")
+    st.write(
+        "### 📋 Uploaded Data"
+    )
 
     st.dataframe(
         df.head(10),
         use_container_width=True
     )
 
-    # Check comment_text column
+    # Check column
     if "comment_text" not in df.columns:
 
         st.error(
-            "❌ CSV must contain a 'comment_text' column."
+            "❌ CSV must contain a "
+            "'comment_text' column."
         )
 
     else:
@@ -468,51 +631,71 @@ if uploaded_file is not None:
 
             total = len(df)
 
-            for i, text in enumerate(df["comment_text"]):
+            for i, text in enumerate(
+                df["comment_text"]
+            ):
 
-                probabilities, predictions = predict_toxicity(
-                    str(text)
+                probabilities, predictions = (
+                    predict_toxicity(
+                        str(text)
+                    )
                 )
 
                 result = {
                     "comment_text": text
                 }
 
-                for label, probability, prediction in zip(
+                for (
+                    label,
+                    probability,
+                    prediction
+                ) in zip(
                     labels,
                     probabilities,
                     predictions
                 ):
 
-                    result[f"{label}_probability"] = round(
+                    result[
+                        f"{label}_probability"
+                    ] = round(
                         float(probability),
                         4
                     )
 
-                    result[label] = int(prediction)
+                    result[label] = int(
+                        prediction
+                    )
 
-                results.append(result)
+                results.append(
+                    result
+                )
 
                 progress.progress(
                     (i + 1) / total
                 )
 
-            result_df = pd.DataFrame(results)
+            result_df = pd.DataFrame(
+                results
+            )
 
             st.success(
                 "✅ Bulk prediction completed!"
             )
 
-            st.write("### 📊 Prediction Results")
+            st.write(
+                "### 📊 Prediction Results"
+            )
 
             st.dataframe(
                 result_df,
                 use_container_width=True
             )
 
-            csv_data = result_df.to_csv(
-                index=False
-            ).encode("utf-8")
+            csv_data = (
+                result_df
+                .to_csv(index=False)
+                .encode("utf-8")
+            )
 
             st.download_button(
                 label="⬇️ Download Predictions CSV",
@@ -521,6 +704,7 @@ if uploaded_file is not None:
                 mime="text/csv",
                 use_container_width=True
             )
+
 
 # =========================================================
 # FOOTER
@@ -538,3 +722,4 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
